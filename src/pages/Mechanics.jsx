@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { AnimatePresence, motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValueEvent, useScroll, useSpring, useTransform } from 'framer-motion';
 import Glass from '../components/Glass';
 import { MaskWords } from '../components/Reveal';
 import { MAIN_COMPONENTS, PRINCIPLE } from '../data/deck';
@@ -10,7 +10,8 @@ import { MAIN_COMPONENTS, PRINCIPLE } from '../data/deck';
  */
 export function Components() {
   const ref = useRef(null);
-  const { scrollYProgress: p } = useScroll({ target: ref, offset: ['start start', 'end end'] });
+  const { scrollYProgress: raw } = useScroll({ target: ref, offset: ['start start', 'end end'] });
+  const p = useSpring(raw, { stiffness: 120, damping: 28, mass: 0.4 }); // eased follow → the track glides instead of stepping with the wheel
   const x = useTransform(p, (v) => `calc(${-v} * (100% - 100vw))`);
   const bar = useTransform(p, [0, 1], [0.04, 1]);
   const [i, setI] = useState(0);
@@ -18,14 +19,14 @@ export function Components() {
   return (
     <section ref={ref} id="components" data-page className="relative h-[480vh] w-full">
       <div className="sticky top-0 h-screen overflow-hidden">
-        <motion.div style={{ x }} className="flex h-full w-max items-center gap-6 pl-5 pr-[10vw] md:gap-8 md:pl-[8vw]">
-          <div className="flex w-[82vw] shrink-0 flex-col justify-center md:w-[34vw]">
+        <motion.div style={{ x }} className="flex h-full w-max items-center gap-6 pl-5 pr-[10vw] will-change-transform md:gap-8 md:pl-[8vw]">
+          <div className="mr-2 flex w-[82vw] shrink-0 flex-col justify-center md:mr-[4vw] md:w-[36vw] md:min-w-[420px]">
             <p className="font-mono text-[12px] uppercase tracking-[0.3em] text-aqua">Hydropower plant</p>
-            <MaskWords text="6 Main Components" className="mt-4 font-display text-[clamp(44px,7vw,108px)] font-semibold leading-[0.95] tracking-tight text-white" />
+            <MaskWords text="6 Main Components" className="mt-4 font-display text-[clamp(40px,5.4vw,88px)] font-semibold leading-[0.98] tracking-tight text-white" />
             <p className="mt-6 max-w-sm text-slate-400">Keep scrolling — follow the water from the dam to the grid.</p>
           </div>
           {MAIN_COMPONENTS.map((c, k) => (
-            <Glass key={c.n} tilt={5} className="group relative w-[78vw] shrink-0 overflow-hidden rounded-[28px] p-3 md:w-[27vw] md:min-w-[380px]">
+            <Glass key={c.n} flat tilt={0} className="group relative w-[78vw] shrink-0 overflow-hidden rounded-[28px] p-3 md:w-[27vw] md:min-w-[380px]">
               <div className="relative overflow-hidden rounded-[20px]">
                 <img src={`/assets/photos/${c.photo}.jpg`} alt={c.title} className="aspect-[16/10] w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink-950/70 via-transparent to-transparent" />

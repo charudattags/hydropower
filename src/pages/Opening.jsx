@@ -40,7 +40,7 @@ function TurbineOrb() {
   );
 }
 
-export function Hero({ scrollTo }) {
+export function Hero({ scrollTo, orbReady = true }) {
   const ref = useRef(null);
   const { scrollYProgress: p } = useScroll({ target: ref, offset: ['start start', 'end start'] });
   const tx = useTransform(p, [0, 1], [0, -160]);
@@ -52,24 +52,27 @@ export function Hero({ scrollTo }) {
     <section ref={ref} id="hero" data-page className="relative flex min-h-screen w-full items-center overflow-hidden px-5 md:px-[8vw]">
       <div className="mx-auto grid w-full max-w-[1300px] items-center gap-10 pt-20 lg:grid-cols-[1.25fr_1fr]">
         <motion.div style={{ x: tx, filter }}>
-          <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="font-mono text-[12px] uppercase tracking-[0.3em] text-aqua">Renewable Energy · 2026</motion.p>
+          <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="font-mono text-[12px] uppercase tracking-[0.3em] text-aqua">Renewable Energy · 2026</motion.p>
           <h1 className="mt-5 text-[clamp(52px,9.6vw,150px)] leading-[0.9] tracking-[-0.03em] text-white" style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 900, fontStyle: 'italic' }} aria-label="Hydro Power Plant">
             {['Hydro', 'Power', 'Plant'].map((w, i) => (
               <span key={w} className="block overflow-hidden pb-[0.06em]">
-                <motion.span className="block" initial={{ y: '110%', rotate: 5 }} animate={{ y: 0, rotate: 0 }} transition={{ duration: 1.1, delay: 0.25 + i * 0.12, ease: [0.22, 1, 0.36, 1] }}
+                <motion.span className="block" initial={{ y: '110%', rotate: 5 }} animate={{ y: 0, rotate: 0 }} transition={{ duration: 1.1, delay: 0.9 + i * 0.12, ease: [0.22, 1, 0.36, 1] }}
                   style={i === 2 ? { backgroundImage: 'linear-gradient(90deg,#2ee6ff,#ffffff 55%,#ffc233)', WebkitBackgroundClip: 'text', color: 'transparent' } : undefined}>{w}</motion.span>
               </span>
             ))}
           </h1>
-          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 0.9 }} className="mt-7 max-w-[34rem] font-serif text-[clamp(22px,2.6vw,34px)] leading-snug text-slate-200">
+          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.5, duration: 0.9 }} className="mt-7 max-w-[34rem] font-serif text-[clamp(22px,2.6vw,34px)] leading-snug text-slate-200">
             Harnessing the energy of flowing water to generate clean, renewable electricity.
           </motion.p>
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }} className="mt-8 flex flex-wrap items-center gap-3">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.8 }} className="mt-8 flex flex-wrap items-center gap-3">
             <span className="liquid relative inline-flex items-center gap-2 rounded-full px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-volt" />Team of 5 · Group Project</span>
             <button onClick={() => scrollTo('agenda')} className="group inline-flex items-center gap-2 rounded-full px-3 py-2 text-[13px] text-slate-300 transition hover:text-white">Scroll to begin <span className="inline-block" style={{ animation: 'bob 1.6s ease-in-out infinite' }}>↓</span></button>
           </motion.div>
         </motion.div>
-        <motion.div style={{ y: orbY, rotate: orbR }} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}><TurbineOrb /></motion.div>
+        {/* #hero-orb-slot is where the intro's 3D runner lands; the glass orb fades in underneath it */}
+        <div id="hero-orb-slot" className="mx-auto w-[min(78vw,460px)]">
+          <motion.div style={{ y: orbY, rotate: orbR }} initial={false} animate={{ opacity: orbReady ? 1 : 0, scale: orbReady ? 1 : 0.94 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}><TurbineOrb /></motion.div>
+        </div>
       </div>
     </section>
   );

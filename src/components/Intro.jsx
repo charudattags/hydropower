@@ -20,6 +20,8 @@ import { audio } from '../utils/audio';
  * "powers on" (bolt + emissive pulse) and the React overlay reveals the title → subtitle → button.
  */
 const BUILD_END = 3.45;
+const MORPH_DUR = 2.0;
+const BG0 = new THREE.Color(0x03070f), BG1 = new THREE.Color(0x0c1b36);
 const ease = { out: (t) => 1 - (1 - t) ** 3, in: (t) => t * t * t, back: (t) => 1 + 2.4 * (t - 1) ** 3 + 1.4 * (t - 1) ** 2 };
 
 const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.2, ...o });
@@ -122,19 +124,31 @@ function makeScene() {
   return { scene, blocks, edgeMats, runner: runnerRef, amber, bolt, boltPts, sparks, curve, root };
 }
 
-export default function Intro({ onBegin }) {
+export default function Intro({ phase = 'intro', onBegin, onMorphDone }) {
   const mount = useRef(null);
-  const leaving = useRef(false);
+  const morphRef = useRef({ on: false, t0: null, done: false });
+  const doneRef = useRef(onMorphDone); doneRef.current = onMorphDone;
+  const morphing = phase === 'morph';
   const [stage, setStage] = useState(0); // 0 building · 1 title · 2 subtitle · 3 button
-  const [gone, setGone] = useState(false);
   const [run, setRun] = useState(0);
   const [snd, setSnd] = useState(audio.on);
   useEffect(() => audio.subscribe(setSnd), []);
 
+  // ── MORPH trigger: measure where the hero's turbine orb sits, then let the render loop take over
+  useEffect(() => {
+    if (!morphing) return;
+    const slot = document.getElementById('hero-orb-slot');
+    const r = slot ? slot.getBoundingClientRect() : { left: innerWidth * 0.62, top: innerHeight * 0.25, width: 320, height: 320 };
+    let cx = r.left + r.width / 2, cy = r.top + r.height / 2, rad = Math.min(r.width, r.height) * 0.43;
+    if (cy + rad > innerHeight || cy - rad < 0) { cx = innerWidth / 2; cy = innerHeight * 0.5; rad = Math.min(innerWidth, innerHeight) * 0.2; } // orb below the fold (phones): shrink to centre and fade
+    morphRef.current = { on: true, t0: null, done: false, cx, cy, rad };
+    audio.whoosh();
+  }, [morphing]);
+
   useEffect(() => {
     const el = mount.current;
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio));
     renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.8;
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     el.appendChild(renderer.domElement);
@@ -177,7 +191,12 @@ export default function Intro({ onBegin }) {
       raf = requestAnimationFrame(frame);
       const dt = Math.min(0.05, clock.getDelta()); t = clock.elapsedTime * (reduce ? 3 : 1); // real elapsed time keeps the < 4 s promise on slow GPUs
 
-      S.blocks.forEach((b) => {
+      // ── MORPH progress 0→1 over MORPH_DUR: the plant disassembles, the runner grows and the whole scene is
+      //    clipped into the circle where the hero page's turbine orb lives.
+      const M = morphRef.current; let mp = 0;
+      if (M.on) { if (M.t0 == null) { M.t0 = t; S.blocks.forEach((b) => burst(b.target, 10, 4.5)); } mp = Math.min(1, (t - M.t0) / (MORPH_DUR * (window.__morphSlow || 1))); }
+      const smooth = (x) => x * x * (3 - 2 * x), c01 = (x) => Math.min(1, Math.max(0, x));
+      S.blocks.forEach((b, bi) => {
         const p = Math.min(1, Math.max(0, (t - b.t0) / b.dur));
         if (p > 0) b.g.visible = true;
         const e = b.mode === 'in' ? ease.in(p) : ease.out(p);
@@ -195,21 +214,34 @@ export default function Intro({ onBegin }) {
           const flash = Math.max(0, 1 - k * 2.2);
           b.g.userData.edges?.forEach((em) => { em.color.setRGB(0.18 + flash * 0.82, 0.9, 1); em.opacity = 0.5 + flash * 0.5; });
         }
+        if (mp > 0) {
+          if (b.name === 'turbine') { // the runner is the one part that survives: it flies to the focus point and swells to orb size
+            const e = smooth(c01(mp / 0.75)), h = el.clientHeight, fit = (M.rad * 1.05 * 7.6) / (h * 0.82);
+            b.g.position.lerpVectors(b.target, tmp.copy(look).sub(S.root.position), e);
+            b.g.scale.setScalar(1 + (fit - 1) * e);
+            b.g.rotation.x = e * Math.PI / 2;                                   // tip the runner so its disc faces the camera, like the hero orb
+            const sh = b.g.children[0].children[2]; if (sh) sh.scale.setScalar(Math.max(0.001, 1 - e * 1.3)); // shaft retracts
+          } else { // everything else shrinks away in a staggered wave, drifting up and spinning
+            const q = smooth(c01((mp - (bi % 7) * 0.04 - bi * 0.01) / 0.42)), sc = Math.max(0.0001, 1 - q);
+            b.g.scale.multiplyScalar(sc); b.g.position.y += q * q * 4; b.g.rotation.y += q * 1.6;
+            b.g.userData.edges?.forEach((em) => { em.color.setRGB(1, 1, 1); em.opacity = 0.6 + q * 0.4; });
+          }
+        }
       });
       for (let i = dust.length - 1; i >= 0; i--) { const d = dust[i]; d.t += dt; const s = 1 + d.t * 9; d.m.scale.set(s, s, s); d.m.material.opacity = Math.max(0, 0.9 - d.t * 2.2); if (d.t > 0.5) { S.scene.remove(d.m); dust.splice(i, 1); } }
 
       for (let i = 0; i < SP; i++) { if (spLife[i] <= 0) continue; spLife[i] -= dt; spVel[i * 3 + 1] -= 7 * dt; spPos[i * 3] += spVel[i * 3] * dt; spPos[i * 3 + 1] += spVel[i * 3 + 1] * dt; spPos[i * 3 + 2] += spVel[i * 3 + 2] * dt; if (spLife[i] <= 0 || spPos[i * 3 + 1] < 0) { spLife[i] = 0; spPos[i * 3 + 1] = -100; } }
       spGeo.attributes.position.needsUpdate = true;
-      S.runner.rotation.y += dt * (powered ? 9 : 2.5);
+      S.runner.rotation.y += dt * (powered ? 9 : 2.5) * (1 + mp * 2.5);
       if (t > BUILD_END && !powered) { powered = true; powerT = t; setStage(1); bloomKick = 1.4; audio.sting(); audio.ambience(); }
       if (powered) { // ── POWER-ON pulse
         const k = t - powerT, pulse = Math.max(0, 1 - k / 1.1);
         S.amber.intensity = 30 * pulse + 6; S.edgeMats.forEach((m) => { m.opacity = 0.45 + pulse * 0.5; });
-        S.bolt.material.opacity = k < 0.55 ? Math.random() * 0.6 + 0.4 : Math.max(0, S.bolt.material.opacity - dt * 3);
+        S.bolt.material.opacity = mp > 0 ? 0 : k < 0.55 ? Math.random() * 0.6 + 0.4 : Math.max(0, S.bolt.material.opacity - dt * 3);
         const pos = S.bolt.geometry.attributes.position, a = new THREE.Vector3(2.1, 3.4, 2.6), z = new THREE.Vector3(6.6, 8.6, 0.5);
         for (let i = 0; i < S.boltPts; i++) { const f = i / (S.boltPts - 1); tmp.lerpVectors(a, z, f); const j = i === 0 || i === S.boltPts - 1 ? 0 : 0.28; pos.setXYZ(i, tmp.x + (Math.random() - 0.5) * j, tmp.y + (Math.random() - 0.5) * j + Math.sin(f * Math.PI) * 0.9, tmp.z + (Math.random() - 0.5) * j); }
         pos.needsUpdate = true;
-        S.sparks.forEach((s) => { const f = (s.o + k * 0.35) % 1; S.curve.getPointAt(f, s.m.position); s.m.position.z += 0.02 * Math.sin(f * 30); s.m.material.opacity = Math.min(1, k * 2) * 0.9; });
+        S.sparks.forEach((s) => { const f = (s.o + k * 0.35) % 1; S.curve.getPointAt(f, s.m.position); s.m.position.z += 0.02 * Math.sin(f * 30); s.m.material.opacity = Math.min(1, k * 2) * 0.9 * (1 - mp); });
       }
 
       // camera: cinematic dolly-in during the build, damped follow, noise shake + roll on impacts, slow orbit + parallax after
@@ -222,7 +254,18 @@ export default function Intro({ onBegin }) {
       camPos.lerp(tmp, 1 - Math.exp(-dt * 5));
       cam.position.copy(camPos);
       cam.position.x += nz(1) * shake; cam.position.y += nz(1.3) * shake; cam.position.z += nz(0.8) * shake * 0.6;
-      if (leaving.current) { fov = Math.min(120, fov + dt * 150); cam.position.lerp(look, Math.min(0.92, (fov - 38) / 105)); cam.fov = fov; cam.updateProjectionMatrix(); bloomKick = Math.max(bloomKick, (fov - 38) / 40); }
+      if (mp > 0) { // camera swoops to face the runner head-on, then the frame is shifted + clipped into the orb slot
+        const w = el.clientWidth, h = el.clientHeight, e2 = smooth(c01(mp / 0.7));
+        camPos.lerp(tmp.set(look.x, look.y + 0.4, look.z + 11), 1 - Math.exp(-dt * (2 + e2 * 6)));
+        cam.position.copy(camPos);
+        const e3 = smooth(c01((mp - 0.22) / 0.78)), dx = (M.cx - w / 2) * e3, dy = (M.cy - h / 2) * e3;
+        cam.setViewOffset(w, h, -dx, -dy, w, h);
+        const R0 = Math.hypot(w, h) * 0.6, R = R0 + (M.rad - R0) * e3;
+        el.style.clipPath = `circle(${R}px at ${w / 2 + dx}px ${h / 2 + dy}px)`;
+        bloomKick = Math.max(bloomKick, Math.sin(Math.min(1, mp * 1.4) * Math.PI) * 0.9);
+        S.scene.background.lerpColors(BG0, BG1, e3); S.scene.fog.color.copy(S.scene.background); // dark void → the orb's deep glass blue
+        if (mp >= 1 && !M.done) { M.done = true; doneRef.current?.(); }
+      }
       cam.lookAt(look);
       cam.rotateZ(nz(0.7) * shake * 0.035);
       bloom.strength = 0.5 + bloomKick * 0.9;
@@ -236,13 +279,13 @@ export default function Intro({ onBegin }) {
     };
   }, [run]);
 
-  const replay = () => { setStage(0); setGone(false); leaving.current = false; setRun((r) => r + 1); };
-
-  const begin = () => { leaving.current = true; audio.whoosh(); setGone(true); setTimeout(onBegin, 1100); };
+  const replay = () => { setStage(0); setRun((r) => r + 1); };
+  const begin = () => onBegin();
 
   return (
-    <motion.div className="fixed inset-0 z-[100] overflow-hidden bg-ink-950" initial={{ opacity: 1 }} animate={{ opacity: gone ? 0 : 1 }} transition={{ duration: 0.55, delay: gone ? 0.4 : 0 }}>
+    <motion.div className="fixed inset-0 z-[100] overflow-hidden" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ pointerEvents: morphing ? 'none' : undefined }}>
       <div ref={mount} key={run} className="absolute inset-0" />
+      <motion.div className="absolute inset-0" animate={{ opacity: morphing ? 0 : 1 }} transition={{ duration: 0.5 }}>
       <div className="pointer-events-none absolute inset-0 mix-blend-screen" style={{ background: 'radial-gradient(70% 60% at 50% 60%, rgba(30,90,200,.22), transparent 70%), radial-gradient(40% 30% at 50% 100%, rgba(255,194,51,.08), transparent 70%)' }} />
       {/* letterbox bars: close in for the build, open when the title lands */}
       {[0, 1].map((k) => (<motion.div key={k} className="pointer-events-none absolute inset-x-0 z-10 bg-black" style={{ [k ? 'bottom' : 'top']: 0 }} initial={{ height: '30vh' }} animate={{ height: stage >= 3 ? '0vh' : stage >= 1 ? '5vh' : '7vh' }} transition={{ duration: stage >= 3 ? 1.4 : 1.6, ease: [0.65, 0, 0.35, 1] }} />))
@@ -251,7 +294,7 @@ export default function Intro({ onBegin }) {
 
       <div className="absolute bottom-5 left-5 z-20 flex gap-2 md:bottom-7 md:left-8">
         <button onClick={() => audio.enable(!audio.on)} aria-pressed={snd} className="liquid relative rounded-full px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-200 transition hover:text-white">{snd ? '◉ Sound on' : '○ Sound off'}</button>
-        {stage >= 3 && !gone && <button onClick={replay} className="liquid relative rounded-full px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-200 transition hover:text-white">↻ Replay</button>}
+        {stage >= 3 && !morphing && <button onClick={replay} className="liquid relative rounded-full px-4 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-200 transition hover:text-white">↻ Replay</button>}
       </div>
       <div className="pointer-events-none absolute inset-x-0 top-[9%] flex flex-col items-center px-6 text-center md:top-[11%]">
         <AnimatePresence>
@@ -287,7 +330,7 @@ export default function Intro({ onBegin }) {
 
       <div className="absolute inset-x-0 bottom-[9%] flex justify-center px-6">
         <AnimatePresence>
-          {stage >= 3 && !gone && (
+          {stage >= 3 && !morphing && (
             <motion.button
               onClick={begin}
               initial={{ opacity: 0, y: 24, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 1.1 }} transition={{ type: 'spring', stiffness: 220, damping: 20 }}
@@ -304,6 +347,7 @@ export default function Intro({ onBegin }) {
           )}
         </AnimatePresence>
       </div>
+      </motion.div>
     </motion.div>
   );
 }

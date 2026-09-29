@@ -14,18 +14,27 @@ import { Future, Stats, Tradeoffs, Types } from './pages/Comparison';
  * scrolled with Lenis smoothing and driven by framer-motion scroll transforms. The final page is the live plant.
  */
 export default function App() {
-  const [phase, setPhase] = useState('intro'); // 'intro' | 'story'
+  const [phase, setPhase] = useState('intro'); // 'intro' → 'morph' (plant morphs into the hero) → 'story'
   const lenis = useRef(null);
 
   useEffect(() => {
-    document.body.classList.toggle('locked', phase === 'intro');
+    document.body.classList.toggle('locked', phase !== 'story');
     if (phase !== 'story') return;
     window.scrollTo(0, 0);
-    const l = new Lenis({ lerp: 0.075, wheelMultiplier: 0.9, smoothWheel: true });
+    const l = new Lenis({ lerp: 0.1, wheelMultiplier: 1, smoothWheel: true });
     lenis.current = l;
     let raf; const loop = (t) => { l.raf(t); raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
     return () => { cancelAnimationFrame(raf); l.destroy(); };
+  }, [phase]);
+
+  // Adaptive quality: if the first seconds of the story run under ~45 fps, drop the expensive glass blur / bubbles.
+  useEffect(() => {
+    if (phase !== 'story') return;
+    let raf, n = 0, last = performance.now(), sum = 0;
+    const loop = (now) => { sum += now - last; last = now; if (++n < 120) raf = requestAnimationFrame(loop); else if (sum / n > 22) document.documentElement.classList.add('lite'); };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
   }, [phase]);
 
   const scrollTo = useCallback((id) => {
@@ -36,11 +45,10 @@ export default function App() {
   return (
     <>
       <Background />
-      <div className="grain" aria-hidden />
-      {phase === 'story' && (
-        <motion.main initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}>
+      {phase !== 'intro' && (
+        <motion.main initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}>
           <Nav scrollTo={scrollTo} />
-          <Hero scrollTo={scrollTo} />
+          <Hero scrollTo={scrollTo} orbReady={phase === 'story'} />
           <Agenda scrollTo={scrollTo} />
           <Divider />
           <What />
@@ -53,7 +61,7 @@ export default function App() {
           <PlantSection />
         </motion.main>
       )}
-      <AnimatePresence>{phase === 'intro' && <Intro key="intro" onBegin={() => setPhase('story')} />}</AnimatePresence>
+      <AnimatePresence>{phase !== 'story' && <Intro key="intro" phase={phase} onBegin={() => setPhase('morph')} onMorphDone={() => setPhase('story')} />}</AnimatePresence>
     </>
   );
 }
