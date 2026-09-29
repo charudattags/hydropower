@@ -10,7 +10,7 @@ const rise = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transiti
  * FOCUSED state UI. Slides in from the right (bottom on phones) while the camera is still
  * flying, then its sections stagger in. Keyed by component id so switching components re-plays it.
  */
-export default function DetailPanel({ c, wide, onBack, onStep, speedRef }) {
+export default function DetailPanel({ c, phys, wide, onBack, onStep, speedRef }) {
   const idx = COMPONENTS.findIndex((x) => x.id === c.id);
   return (
     <motion.aside
@@ -63,6 +63,21 @@ export default function DetailPanel({ c, wide, onBack, onStep, speedRef }) {
               </div>
             ))}
           </dl>
+        </motion.section>
+
+        <motion.section variants={rise} aria-label="Worked calculation">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-400">Worked calculation</h3>
+            <span className="rounded-full bg-aqua/10 px-2.5 py-1 font-mono text-[10px] text-aqua">live · {Math.round(phys.phi * 100)}% flow</span>
+          </div>
+          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-xl border border-white/[0.07] bg-black/20">
+            {c.calc(phys).map(([name, eq, val]) => (
+              <div key={name} className="px-3.5 py-2.5">
+                <div className="flex items-baseline justify-between gap-3"><span className="text-[12px] text-slate-300">{name}</span><span className="font-mono text-[10.5px] text-slate-500">{eq}</span></div>
+                <div className="mt-1 font-mono text-[12.5px] tabular-nums text-volt-hot">{val}</div>
+              </div>
+            ))}
+          </div>
         </motion.section>
 
         <motion.figure variants={rise} className="overflow-hidden rounded-2xl border border-white/10">

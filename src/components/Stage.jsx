@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { animate, motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { COMPONENTS } from '../data/components';
+import { COMPONENTS, PASSIVE_LABELS } from '../data/components';
 import { useElementSize } from '../hooks/useElementSize';
 import { cameraFor, fitStage, overviewCamera } from '../utils/camera';
-import Hotspot from './Hotspot';
+import Hotspot, { PassiveLabel } from './Hotspot';
 import FlowCanvas from './FlowCanvas';
 
 // Energy-conversion legend pinned to the artwork while the overlay is on (blue → gold).
 const TAGS = [
-  { t: 'Potential', x: 0.13, y: 0.17, c: '#3f86ff' },
+  { t: 'Potential', x: 0.27, y: 0.21, c: '#3f86ff' },
   { t: 'Kinetic', x: 0.385, y: 0.43, c: '#2ee6ff' },
   { t: 'Mechanical', x: 0.665, y: 0.63, c: '#e9fbff' },
   { t: 'Electrical', x: 0.72, y: 0.3, c: '#ffc233' },
@@ -16,7 +16,7 @@ const TAGS = [
 
 const EASE = [0.65, 0.02, 0.18, 1]; // slow-in / slow-out "camera crane" curve
 
-export default function Stage({ mode, activeId, hoverId, setHover, onSelect, overlay, speedRef, wide }) {
+export default function Stage({ mode, activeId, hoverId, setHover, onSelect, overlay, speedRef, wide, phys, visible = true, labels = true }) {
   const [wrap, size] = useElementSize();
   const camX = useMotionValue(0), camY = useMotionValue(0), camS = useMotionValue(1);
   const cam = useRef({ x: camX, y: camY, scale: camS }).current;
@@ -69,8 +69,8 @@ export default function Stage({ mode, activeId, hoverId, setHover, onSelect, ove
         {size.cw > 0 && (
           <motion.div className="absolute left-0 top-0" style={{ width: fit.W, height: fit.H, x: camX, y: camY, scale: camS, originX: 0, originY: 0, transformStyle: 'preserve-3d' }}>
             <motion.img
-              src="/assets/plant-cutaway.jpg"
-              alt="Cutaway illustration of a hydropower plant showing reservoir, intake, penstock, turbine, generator and tailrace"
+              src="/assets/plant-clean.jpg"
+              alt="Cutaway illustration of a hydropower plant: reservoir, intake, penstock, turbine, generator and tailrace"
               draggable={false}
               className="h-full w-full select-none object-cover"
               initial={false}
@@ -78,8 +78,9 @@ export default function Stage({ mode, activeId, hoverId, setHover, onSelect, ove
               transition={{ duration: 0.7 }}
             />
             {COMPONENTS.map((c) => (
-              <Hotspot key={c.id} c={c} camScale={camS} mode={mode} active={c.id === activeId} hovered={hoverId === c.id} onHover={setHover} onSelect={onSelect} />
+              <Hotspot key={c.id} c={c} phys={phys} showLabel={labels} camScale={camS} mode={mode} active={c.id === activeId} hovered={hoverId === c.id} onHover={setHover} onSelect={onSelect} />
             ))}
+            {PASSIVE_LABELS.map((l) => <PassiveLabel key={l.t} l={l} camScale={camS} show={!focused && labels} />)}
             {TAGS.map((g, i) => (
               <motion.div key={g.t} className="pointer-events-none absolute" style={{ left: `${g.x * 100}%`, top: `${g.y * 100}%`, scale: inv, x: '-50%', y: '-50%' }}
                 initial={false} animate={{ opacity: overlay && !focused ? 1 : 0, y: overlay && !focused ? '-50%' : '-30%' }} transition={{ delay: overlay ? 0.15 * i : 0, duration: 0.5 }}>
@@ -90,7 +91,7 @@ export default function Stage({ mode, activeId, hoverId, setHover, onSelect, ove
             ))}
           </motion.div>
         )}
-        {size.cw > 0 && <FlowCanvas active={overlay} dimmed={false} cam={cam} box={fit} speedRef={speedRef} />}
+        {size.cw > 0 && <FlowCanvas visible={visible} active={overlay} dimmed={false} cam={cam} box={fit} speedRef={speedRef} />}
       </motion.div>
 
       {/* Static vignette + edge fade so the bright daylight art sits comfortably in the dark UI */}
