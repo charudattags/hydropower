@@ -19,10 +19,9 @@ import { STAGE } from '../data/components';
  * to the artwork while the camera is mid-flight.
  */
 
-/** Cover on wide viewports, contain on tall ones so the whole plant stays legible on phones. */
+/** The diorama floats on a transparent stage, so it is always *contained* (fully visible, side space kept for labels). */
 export function fitStage(cw, ch) {
-  const portrait = cw / ch < STAGE.aspect * 0.78;
-  const k = portrait ? cw / STAGE.w : Math.max(cw / STAGE.w, ch / STAGE.h);
+  const k = Math.min(cw / STAGE.w, ch / STAGE.h) * 0.96;
   return { W: STAGE.w * k, H: STAGE.h * k, k };
 }
 
@@ -39,6 +38,6 @@ export function cameraFor({ cw, ch }, target, zoom, anchor = { x: 0.5, y: 0.5 },
 /** `freeY` lets phones pan past the artwork's edge – the gap ends up hidden behind the bottom sheet. */
 /** Overview camera: whole illustration, centred. */
 export const overviewCamera = (size) => {
-  const portrait = size.cw / size.ch < STAGE.aspect * 0.78;
-  return cameraFor(size, { x: 0.5, y: 0.5 }, 1, { x: 0.5, y: portrait ? 0.33 : 0.5 });
+  const portrait = size.cw / size.ch < 0.9;
+  return cameraFor(size, { x: 0.5, y: 0.5 }, 1, { x: 0.5, y: portrait ? 0.4 : 0.5 });
 };

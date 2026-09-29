@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { FLOW_PATHS, POWER_PATH } from '../data/flow';
+import { FLOW_PATHS, POWER_PATH, ROTOR, TURBINE } from '../data/flow';
 import { STAGE } from '../data/components';
 
 /**
@@ -44,7 +44,7 @@ const at = (path, t) => {
 function buildScene() {
   const paths = FLOW_PATHS.map((f) => {
     const s = samplePath(f.d);
-    const count = f.kind === 'transfer' ? 0 : Math.round(s.len / (f.kind === 'spill' ? 5 : f.kind === 'river' ? 9 : f.id === 'penstock' ? 7 : 12));
+    const count = f.kind === 'transfer' ? 0 : Math.round(s.len / (f.kind === 'surface' ? 8 : f.kind === 'pond' ? 12 : f.id === 'penstock' ? 6 : 10));
     const parts = Array.from({ length: count }, () => ({ t: Math.random(), off: rand(-9, 9), sz: rand(1.1, 2.6), v: rand(0.8, 1.2) }));
     return { ...f, ...s, parts };
   });
@@ -108,15 +108,15 @@ export default function FlowCanvas({ active, cam, box, speedRef, dimmed, visible
       //     (speed factor rises with t) to show potential energy converting to kinetic energy.
       paths.forEach((p) => {
         if (p.kind === 'transfer') return;
-        if (p.kind === 'spill' || p.kind === 'river') {
-          const river = p.kind === 'river';
+        if (p.kind === 'surface' || p.kind === 'pond') {
+          // calm streaks across a water top-face (tailrace outflow / reservoir surface)
+          const pond = p.kind === 'pond', sd = p.spread || 30;
           p.parts.forEach((q) => {
-            q.t += (dt * sp * (river ? 60 : 150) * q.v) / p.len;
-            if (q.t > 1) { q.t -= 1; q.off = rand(river ? -42 : -16, river ? 42 : 16); }
-            const [x, y, dx, dy] = at(p, q.t), [nx, ny] = norm(dx, dy);
-            const ox = nx * q.off * (river ? 1 + q.t * 0.4 : 1), oy = ny * q.off * (river ? 1 + q.t * 0.4 : 1);
-            ctx.save(); ctx.translate(ox, oy);
-            streak(p, q.t, river ? 0.03 : 0.045, river ? 1.4 : 1.9, river ? CYAN : WHITE, (river ? 0.32 : 0.6) * A * Math.sin(q.t * Math.PI));
+            q.t += (dt * sp * (pond ? 14 : 46) * q.v) / p.len;
+            if (q.t > 1) { q.t -= 1; q.off = rand(-sd, sd); }
+            const [, , dx, dy] = at(p, q.t), [nx, ny] = norm(dx, dy);
+            ctx.save(); ctx.translate(nx * q.off, ny * q.off);
+            streak(p, q.t, pond ? 0.025 : 0.05, pond ? 1.2 : 1.6, pond ? WHITE : CYAN, (pond ? 0.3 : 0.5) * A * Math.sin(q.t * Math.PI));
             ctx.restore();
           });
           return;
@@ -125,7 +125,7 @@ export default function FlowCanvas({ active, cam, box, speedRef, dimmed, visible
         p.parts.forEach((q) => {
           const accel = isPen ? 0.55 + q.t * 1.5 : p.id === 'tailrace' ? 0.9 - q.t * 0.35 : 0.5;
           q.t += (dt * sp * 95 * q.v * accel) / p.len;
-          if (q.t > 1) { q.t -= 1; q.off = rand(-9, 9); }
+          if (q.t > 1) { q.t -= 1; q.off = rand(-8, 8); }
           const [x, y, dx, dy] = at(p, q.t);
           const [nx, ny] = norm(dx, dy);
           const ox = nx * q.off, oy = ny * q.off;
@@ -144,22 +144,22 @@ export default function FlowCanvas({ active, cam, box, speedRef, dimmed, visible
 
       // 2 ─ Kinetic transfer at the turbine: rotating arc segments shift cyan → white → gold, and
       //     pulse rings expand outward as motion is handed to the shaft.
-      const cx = 812, cy = 548;
+      const cx = TURBINE.x, cy = TURBINE.y, R = TURBINE.r;
       for (let i = 0; i < 9; i++) {
         const a = clock * 4.2 + (i / 9) * 6.283;
         const col = mix(CYAN, HOT, i / 9);
         ctx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${0.9 * A})`;
         ctx.lineWidth = 3.2;
-        ctx.beginPath(); ctx.arc(cx, cy, 30, a, a + 0.36); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, R, a, a + 0.36); ctx.stroke();
       }
       for (let i = 0; i < 2; i++) {
         const ph = (clock * 0.7 + i * 0.5) % 1;
         ctx.strokeStyle = `rgba(255,226,122,${(1 - ph) * 0.5 * F})`; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(cx, cy, 20 + ph * 46, 0, 6.283); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, R * 0.7 + ph * R * 1.5, 0, 6.283); ctx.stroke();
       }
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 44);
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.5);
       g.addColorStop(0, `rgba(255,236,150,${(0.14 + 0.31 * F)})`); g.addColorStop(1, 'rgba(46,230,255,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 44, 0, 6.283); ctx.fill();
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 1.5, 0, 6.283); ctx.fill();
 
       // 2b ─ Ambient life: spinning runner blades (motion-blurred), rotor glow at the generator,
       //      twinkling glints on the reservoir surface.
@@ -167,18 +167,18 @@ export default function FlowCanvas({ active, cam, box, speedRef, dimmed, visible
       for (let i = 0; i < 6; i++) {
         const a = clock * 6.5 + (i / 6) * 6.283;
         ctx.strokeStyle = `rgba(235,250,255,${0.5 * A})`;
-        ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9); ctx.quadraticCurveTo(cx + Math.cos(a + 0.5) * 20, cy + Math.sin(a + 0.5) * 20, cx + Math.cos(a + 0.9) * 27, cy + Math.sin(a + 0.9) * 27); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * R * 0.3, cy + Math.sin(a) * R * 0.3); ctx.quadraticCurveTo(cx + Math.cos(a + 0.5) * R * 0.7, cy + Math.sin(a + 0.5) * R * 0.7, cx + Math.cos(a + 0.9) * R * 0.92, cy + Math.sin(a + 0.9) * R * 0.92); ctx.stroke();
       }
       for (let i = 0; i < 3; i++) {
         const a = clock * 3 + i * 2.094;
         ctx.strokeStyle = `rgba(255,194,51,${0.85 * A})`; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.ellipse(832, 383, 44, 12, 0, a, a + 0.9); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(ROTOR.x, ROTOR.y, ROTOR.rx, ROTOR.ry, 0, a, a + 0.9); ctx.stroke();
       }
       for (let i = 0; i < 46; i++) {
-        const gx = 20 + ((i * 97) % 310) + Math.sin(clock * 0.4 + i) * 6, gy = 176 + ((i * 53) % 150) * (1 + (i % 3) * 0.05);
+        const u = ((i * 0.618) % 1), v = ((i * 0.377) % 1), gx = 60 + u * 330 + Math.sin(clock * 0.4 + i) * 5, gy = 176 - u * 100 + v * 34 + Math.sin(clock * 0.3 + i * 2) * 3;
         const tw = Math.max(0, Math.sin(clock * (0.9 + (i % 5) * 0.3) + i * 1.7));
         ctx.strokeStyle = `rgba(230,246,255,${0.55 * tw * A})`; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + 5 + tw * 6, gy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gx, gy); ctx.lineTo(gx + 4 + tw * 5, gy); ctx.stroke();
       }
 
       // 3 ─ Lightning: jagged polyline re-randomised ~every 90 ms (scaled by speed) with three

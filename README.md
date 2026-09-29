@@ -30,4 +30,4 @@ npm run build    # production bundle in dist/
 
 The Flow Speed slider sets the gate opening φ = clamp(speed, 0.3, 1.2) so pressures, powers and currents update live; the runner stays grid-locked at 187.5 rpm.
 
-`public/assets/plant-clean.jpg` is the deck's cutaway with the baked-in English labels inpainted away (OpenCV), so the interface's own numbered, flow-ordered labels are the only ones.
+`public/assets/plant-diorama.webp` is the supplied cutaway render: labels inpainted away, background matted out and upscaled, so the interface's own numbered, flow-ordered labels sit on a floating diorama. The intro reproduces the same diorama in Three.js.

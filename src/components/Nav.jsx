@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, useScroll, useSpring } from 'framer-motion';
+import { audio } from '../utils/audio';
 
 const PAGES = [['hero', 'Title'], ['agenda', 'Agenda'], ['intro', 'Introduction'], ['what', 'What is hydropower'], ['components', 'Components'], ['principle', 'Working principle'], ['types', 'Types of plants'], ['tradeoffs', 'Trade-offs'], ['stats', 'Key statistics'], ['future', 'The future'], ['plant', 'Working prototype']];
 
@@ -8,6 +9,8 @@ export default function Nav({ scrollTo }) {
   const { scrollYProgress } = useScroll();
   const bar = useSpring(scrollYProgress, { stiffness: 140, damping: 26 });
   const [cur, setCur] = useState('hero');
+  const [snd, setSnd] = useState(audio.on);
+  useEffect(() => audio.subscribe(setSnd), []);
   useEffect(() => {
     const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && setCur(e.target.id)), { rootMargin: '-45% 0px -45% 0px' });
     PAGES.forEach(([id]) => { const el = document.getElementById(id); el && io.observe(el); });
@@ -20,6 +23,7 @@ export default function Nav({ scrollTo }) {
         <span className="grid h-8 w-8 place-items-center rounded-xl border border-aqua/40 bg-aqua/10 text-aqua backdrop-blur"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z" /></svg></span>
         
       </div>
+      <button onClick={() => { audio.enable(!audio.on); audio.ambience(); }} aria-pressed={snd} aria-label="Toggle sound" className="liquid fixed right-4 top-4 z-[60] rounded-full px-3 py-[7px] font-mono text-[10px] uppercase tracking-[0.2em] text-slate-200 transition hover:text-white md:right-8 md:top-6">{snd ? '◉ Sound' : '○ Sound'}</button>
       <nav aria-label="Pages" className="fixed right-3 top-1/2 z-[60] hidden -translate-y-1/2 flex-col items-end gap-2.5 md:flex">
         {PAGES.map(([id, label], i) => {
           const on = cur === id;

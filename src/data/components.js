@@ -20,9 +20,9 @@ export const COMPONENTS = [
     basic: { label: 'Energy form', value: 'Potential energy' },
     summary: 'Stores river water behind the dam and creates the head — the height difference that powers everything downstream.',
     energy: 'Gravitational potential', formula: 'E = m · g · h',
-    hotspot: { x: 0.125, y: 0.3, w: 0.2, h: 0.22, rot: 0 },
-    camera: { x: 0.17, y: 0.33, zoom: 1.9 },
-    label: { side: 't', len: 52, live: (p) => `H = 160 m · ${fmt(p.pStatic, 1)} bar` },
+    hotspot: { x: 0.14, y: 0.46, w: 0.25, h: 0.62, rot: 0 },
+    camera: { x: 0.16, y: 0.42, zoom: 1.9 },
+    label: { side: 'l', len: 150, live: (p) => `H = 160 m · ${fmt(p.pStatic, 1)} bar` },
     photo: 'reservoir',
     specs: [
       { label: 'Gross head', value: 160, unit: 'm' },
@@ -42,9 +42,9 @@ export const COMPONENTS = [
     basic: { label: 'Function', value: 'Flow regulation' },
     summary: 'A gated structure with a trash rack that filters debris and meters how much water enters the penstock.',
     energy: 'Potential → pressure', formula: 'Q = A · v',
-    hotspot: { x: 0.235, y: 0.43, w: 0.1, h: 0.17, rot: -8 },
-    camera: { x: 0.26, y: 0.45, zoom: 2.4 },
-    label: { side: 'l', len: 64, live: (p) => `${n1(1.5 * p.phi)} m/s approach` },
+    hotspot: { x: 0.225, y: 0.29, w: 0.1, h: 0.15, rot: 0 },
+    camera: { x: 0.24, y: 0.3, zoom: 2.4 },
+    label: { side: 'l', len: 230, live: (p) => `${n1(1.5 * p.phi)} m/s approach` },
     photo: 'intake',
     specs: [
       { label: 'Gates', value: '2 × 4.5 × 6.3', unit: 'm' },
@@ -63,9 +63,9 @@ export const COMPONENTS = [
     basic: { label: 'Energy form', value: 'Pressure + kinetic' },
     summary: 'A steel pipe that channels water down the slope, converting stored height into pressure and speed.',
     energy: 'Potential → kinetic', formula: 'Δp = ρ · a · Δv',
-    hotspot: { x: 0.4, y: 0.56, w: 0.28, h: 0.13, rot: 31 },
-    camera: { x: 0.4, y: 0.56, zoom: 2.0 },
-    label: { side: 'l', len: 70, live: (p) => `${n1(p.pInlet)} bar · ${n1(p.v)} m/s` },
+    hotspot: { x: 0.447, y: 0.58, w: 0.36, h: 0.085, rot: 66 },
+    camera: { x: 0.45, y: 0.55, zoom: 2.2 },
+    label: { side: 'l', len: 300, live: (p) => `${n1(p.pInlet)} bar · ${n1(p.v)} m/s` },
     photo: 'penstock',
     specs: [
       { label: 'Diameter', value: 5.2, unit: 'm', decimals: 1 },
@@ -87,9 +87,9 @@ export const COMPONENTS = [
     basic: { label: 'Energy form', value: 'Kinetic → mechanical' },
     summary: 'Pressurised water sweeps through the runner blades and turns the shaft — the heart of the conversion.',
     energy: 'Kinetic → mechanical', formula: 'P = ρ · g · Q · Hn · η',
-    hotspot: { x: 0.575, y: 0.69, w: 0.12, h: 0.17, rot: 0 },
-    camera: { x: 0.585, y: 0.68, zoom: 2.7 },
-    label: { side: 'l', len: 84, live: (p) => `${n1(p.rpm)} rpm · ${fmt(p.Pshaft, 0)} MW` },
+    hotspot: { x: 0.598, y: 0.755, w: 0.15, h: 0.17, rot: 0 },
+    camera: { x: 0.6, y: 0.74, zoom: 2.7 },
+    label: { side: 'l', len: 160, live: (p) => `${n1(p.rpm)} rpm · ${fmt(p.Pshaft, 0)} MW` },
     photo: 'turbine',
     specs: [
       { label: 'Type', value: 'Francis', unit: '' },
@@ -115,9 +115,9 @@ export const COMPONENTS = [
     basic: { label: 'Energy form', value: 'Mechanical → electrical' },
     summary: 'The shaft spins a magnetised rotor inside copper windings, inducing alternating current by electromagnetic induction.',
     energy: 'Mechanical → electrical', formula: 'ε = −N · dΦ/dt',
-    hotspot: { x: 0.595, y: 0.485, w: 0.155, h: 0.16, rot: 0 },
-    camera: { x: 0.6, y: 0.5, zoom: 2.5 },
-    label: { side: 'r', len: 76, live: (p) => `${fmt(p.Pel, 0)} MW · 13.8 kV` },
+    hotspot: { x: 0.6, y: 0.565, w: 0.23, h: 0.2, rot: 0 },
+    camera: { x: 0.62, y: 0.57, zoom: 2.4 },
+    label: { side: 'r', len: 250, live: (p) => `${fmt(p.Pel, 0)} MW · 13.8 kV` },
     photo: 'generator',
     specs: [
       { label: 'Rating', value: 130, unit: 'MVA' },
@@ -141,9 +141,9 @@ export const COMPONENTS = [
     basic: { label: 'Function', value: 'Water returns to river' },
     summary: 'A calm channel that carries spent water back downstream, leaving the river’s volume unchanged.',
     energy: 'Residual kinetic', formula: 'Q_out = Q_in',
-    hotspot: { x: 0.8, y: 0.885, w: 0.2, h: 0.1, rot: 0 },
-    camera: { x: 0.78, y: 0.82, zoom: 2.1 },
-    label: { side: 't', len: 46, live: (p) => `${n1(p.Q)} m³/s · ${fmt(p.vTail, 1)} m/s` },
+    hotspot: { x: 0.87, y: 0.8, w: 0.22, h: 0.32, rot: 0 },
+    camera: { x: 0.84, y: 0.78, zoom: 2.2 },
+    label: { side: 'r', len: 60, live: (p) => `${n1(p.Q)} m³/s · ${fmt(p.vTail, 1)} m/s` },
     photo: 'tailrace',
     specs: [
       { label: 'Rated discharge', value: 85, unit: 'm³/s' },
@@ -162,12 +162,12 @@ export const COMPONENTS = [
 
 /** Unclickable reference tags that complete the labelling of the diagram (flow order: 1 → 6, then the grid). */
 export const PASSIVE_LABELS = [
-  { t: 'Dam', x: 0.53, y: 0.25, side: 't', len: 34 },
-  { t: 'Control gate', x: 0.535, y: 0.685, side: 'b', len: 34 },
-  { t: 'Draft tube', x: 0.612, y: 0.835, side: 'b', len: 34 },
-  { t: 'Vertical shaft', x: 0.612, y: 0.6, side: 'r', len: 46 },
-  { t: 'Transformer', x: 0.715, y: 0.245, side: 'r', len: 44 },
-  { t: 'Transmission lines', x: 0.82, y: 0.12, side: 'b', len: 34 },
+  { t: 'Dam', x: 0.42, y: 0.1, side: 't', len: 46 },
+  { t: 'Powerhouse', x: 0.66, y: 0.5, side: 'r', len: 150 },
+  { t: 'Vertical shaft', x: 0.612, y: 0.655, side: 'r', len: 190 },
+  { t: 'Draft tube', x: 0.6, y: 0.86, side: 'b', len: 38 },
+  { t: 'To grid', x: 0.985, y: 0.104, side: 'b', len: 30 },
 ];
 
-export const STAGE = { w: 1400, h: 764, aspect: 1400 / 764 };
+/** Stage design space = the cropped diorama (515 × 457 source px) → 1000 × 887. */
+export const STAGE = { w: 1000, h: 887, aspect: 1000 / 887 };

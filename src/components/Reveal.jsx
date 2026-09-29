@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useSpring, useTransform, useVelocity } from 'framer-motion';
 
 /** Headline whose lines/words rise out of a mask when scrolled into view. */
 export function MaskWords({ text, className = '', delay = 0, as: Tag = 'h2', style }) {
@@ -43,14 +43,18 @@ function ScrubWord({ children, progress, range }) {
  */
 export function Page({ id, children, className = '', flat = false }) {
   const ref = useRef(null);
-  const { scrollYProgress: p } = useScroll({ target: ref, offset: ['start end', 'end start'] });
+  const { scrollYProgress: raw } = useScroll({ target: ref, offset: ['start end', 'end start'] });
+  const p = useSpring(raw, { stiffness: 110, damping: 26, mass: 0.5 }); // critically-damped follow → no scroll jitter
+  const { scrollY } = useScroll();
+  const vel = useSpring(useVelocity(scrollY), { stiffness: 120, damping: 30 });
+  const skewY = useTransform(vel, [-3000, 0, 3000], [-1.4, 0, 1.4]);
   const scale = useTransform(p, [0, 0.28, 0.72, 1], [0.86, 1, 1, 0.9]);
   const y = useTransform(p, [0, 0.28, 0.72, 1], [160, 0, 0, -120]);
   const rotateX = useTransform(p, [0, 0.28, 0.72, 1], [16, 0, 0, -8]);
   const opacity = useTransform(p, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
   return (
     <section ref={ref} id={id} data-page className={`relative min-h-screen w-full ${className}`} style={{ perspective: 1400 }}>
-      <motion.div className="flex min-h-screen w-full items-center" style={flat ? undefined : { scale, y, rotateX, opacity, transformOrigin: '50% 100%' }}>
+      <motion.div className="flex min-h-screen w-full items-center" style={flat ? undefined : { scale, y, rotateX, opacity, skewY, transformOrigin: '50% 100%' }}>
         {children}
       </motion.div>
     </section>

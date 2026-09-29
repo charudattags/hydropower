@@ -21,7 +21,7 @@ export default function App() {
     document.body.classList.toggle('locked', phase === 'intro');
     if (phase !== 'story') return;
     window.scrollTo(0, 0);
-    const l = new Lenis({ duration: 1.25, easing: (t) => Math.min(1, 1.001 - 2 ** (-10 * t)), smoothWheel: true });
+    const l = new Lenis({ lerp: 0.075, wheelMultiplier: 0.9, smoothWheel: true });
     lenis.current = l;
     let raf; const loop = (t) => { l.raf(t); raf = requestAnimationFrame(loop); };
     raf = requestAnimationFrame(loop);
@@ -36,6 +36,7 @@ export default function App() {
   return (
     <>
       <Background />
+      <div className="grain" aria-hidden />
       {phase === 'story' && (
         <motion.main initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}>
           <Nav scrollTo={scrollTo} />
